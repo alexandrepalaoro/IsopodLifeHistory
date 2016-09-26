@@ -1,18 +1,30 @@
 rm(list=ls())
 
+##
+###PACKAGES NEEDED
+##
+
 library(MASS)
 library(bbmle)
 library(ggplot2)
 library(cowplot)
 
+##LOAD DATA
+
 fert<-read.csv("fertility.csv",h=T)
 names(fert)
+
+######################################################################################
+## Scaling and centering the continuous variables that will be used in the analyses ##
+######################################################################################
+
 fert$size.scale<-scale(log(fert$size.fert))
 fert$size.log<-log(fert$size.fert)
 
+## First, let's take a look if populations differ in the number of embryos/mancae
 
-tiff(file="embryos-diffpop.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
+#tiff(file="embryos-diffpop.tiff",units="mm",width=170,height=120,res=600,
+#     compression="lzw")
 
 par(mfrow=c(1,2))
 
@@ -28,18 +40,22 @@ hist(fert$embryos[fert$species=="inflata"&fert$pop=="pop3"],add=T,col=adjustcolo
      prob=T)
 text(11.01,0.29,"(b)")
 
-dev.off()
+#dev.off()
+
+# No they don't. Thus, no need to perform a GLMM. Let's stick with the regular GLM.
 
 par(mfrow=c(1,1))
-hist(fert$embryos[fert$species=='petronioi'&fert$status=="uninfected"],prob=T,
-     ylim=c(0,0.25),main="",xlab="Number of embryos")
-hist(fert$embryos[fert$species=='petronioi'&fert$status=="infected"],add=T,prob=T,
-     col=adjustcolor('red',0.6))
 
+# Before we go on with the analysis, there is one species that has individuals infected by the
+# bacteria Wolbachia, and ones that are not. Thus, I will remove the uninfected individuals 
+# because there are fewer observations of uninfected individuals, and all other analyses were 
+# performed using only the infected individuals.
 
 fert$inter<-interaction(fert$species,fert$status)
 
 fert<-fert[!fert$inter=='petronioi.uninfected',]
+
+# Done. Now let's do some GLMs
 
 m1<-glm(embryos~size.scale*species,data=fert,family='poisson')
 summary(m1)
@@ -48,12 +64,14 @@ m2<-glm(embryos~size.scale*species,data=fert,family=quasipoisson)
 summary(m2)
 anova(m2,test="Chisq")
 
+# Data seem overdispersed and the negative binomial is not being able to estimate one of the
+# parameters (i.e. the theta), so let's stick with the quasipoisson.
 
+#model used for the predict() function
 modelPlot<-glm(embryos~size.log*species,data=fert,family=quasipoisson)
 
-tiff(file="embryos.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
-
+#tiff(file="embryos.tiff",units="mm",width=170,height=120,res=600,
+#     compression="lzw")
 
 plot(embryos~size.log,data=fert,bty='l',las=1,cex=1.1,
      xlab="Cephalothorax width (log)",ylab="Number of embryos",
@@ -66,6 +84,14 @@ legend("topleft", legend=c(expression(italic("Atlantoscia floridana"),
        pt.bg=c("black","darkgray","white"),bty='n',
        cex=1.2)
 
+# Here I decided to use the predict() function instead of curve() simply because I wanted
+# to diversify and lear more about both :) 
+# The estimated curves are identical (not shown here), so I will stick with predict() here.
+
+
+# To use the predict() function we need to create a new X-axis in the same range as the plot
+# and with the same length in the factors. After, we pool them all in one data.frame we use
+# predict()
 cw.flo<-seq(min(fert$size.log[fert$species=="floridana"]),
                 max(fert$size.log[fert$species=="floridana"]),
             length.out=100)
@@ -90,13 +116,16 @@ lines(infl$size.log,predict(modelPlot,type='response',newdata=infl),lwd=3,col="d
 Pet<-data.frame(size.log=cw.pet,species=sp.pet)
 lines(Pet$size.log,predict(modelPlot,type='response',newdata=Pet),lwd=3,lty=2)
 
-dev.off()
+#dev.off()
+
+#Removing the intercept to estimate parameters with more precision
 
 m3.I<-glm(embryos~size.scale*species-1,data=fert,family=quasipoisson)
 plot(m3.I,which=1,col=fert$species)
 m3.coef<-m3.I$coefficients
 m3.ci<-confint(m3.I)
 
+# Calculating intercepts and slopes and adding them to a data.frame
 intercept<-data.frame(v1=c("floridana","inflata","petronioi"),
                       v2=exp(m3.ci[2:4,1]),v3=exp(m3.coef[2:4]),v4=exp(m3.ci[2:4,2]))
 names(intercept)<-c("species","ci.l","intercept","ci.up")
@@ -115,7 +144,7 @@ slope<-data.frame(v1=c("floridana","inflata","petronioi"),
                   v4=c(exp(m3.ci[1,2]),ciup.infl,ciup.petro))
 names(slope)<-c("species","ci.l","slope","ci.up")
 
-
+#plotting an saving
 plot1<-ggplot(data = intercept, aes(x = species, y = intercept, ymin = ci.l, ymax = ci.up)) +
   geom_point(position = position_dodge(width = 0.2)) +
   geom_errorbar(position = position_dodge(width = 0.2), width = 0.1) +
@@ -157,16 +186,19 @@ plot2<- ggplot(data = slope, aes(x = species, y = slope, ymin = ci.l, ymax = ci.
                                        italic("A. petronioi")))) 
 
 
-tiff(file="int+slope-embryos.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
+#tiff(file="int+slope-embryos.tiff",units="mm",width=170,height=120,res=600,
+#     compression="lzw")
 plot_grid(plot1,plot2,labels=c("(a)","(b)"),ncol=2,nrow=1)
-dev.off()
+#dev.off()
 
+#### Now we move to the fertility of infected vs. uninfected individuals
 
 rm(list=ls())
 fert<-read.csv("fertility.csv",h=T)
+# Removing all the other species
 petro<-fert[fert$species=="petronioi",]
 
+#Scaling and centering...
 petro$size.scale<-scale(log(petro$size.fert))
 petro$size.log<-log(petro$size.fert)
 
@@ -174,28 +206,13 @@ m5<-glm(embryos~size.scale*status,data=petro,family=poisson)
 summary(m5)
 anova(m5,test="Chisq")
 
-tiff(file="diff-statusANDsize.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
+# The regular poisson GLM did a good job, so let's stick with it.
 
-par(mfrow=c(1,2))
-hist(fert$embryos[fert$species=='petronioi'&fert$status=="uninfected"],prob=T,
-     ylim=c(0,0.25),main="",xlab="Number of embryos")
-hist(fert$embryos[fert$species=='petronioi'&fert$status=="infected"],add=T,prob=T,
-     col=adjustcolor('red',0.6))
-text(13.62,0.24,"(a)")
-
-hist(log(fert$size.fert[fert$species=='petronioi'&fert$status=="uninfected"]),prob=T,
-     main="",xlab="Cepalothorax width (log)",xlim=c(0.1,0.55))
-hist(log(fert$size.fert[fert$species=='petronioi'&fert$status=="infected"]),add=T,prob=T,
-     col=adjustcolor('red',0.6))
-text(0.48,6.7,"(b)")
-dev.off()
-
+# Model for predict()
 modelPlot<-glm(embryos~size.log*status,data=petro,family=poisson)
 
-
-tiff(file="status-embryos.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
+#tiff(file="status-embryos.tiff",units="mm",width=170,height=120,res=600,
+#     compression="lzw")
 plot(embryos~size.log,data=petro,bty='l',las=1,cex=1.3,
      xlab="Cephalothorax width (log)",ylab="Number of embryos",
      pch=21,bg=c("black","white")[as.numeric(status)])
@@ -221,8 +238,9 @@ lines(Infect$size.log,predict(modelPlot,type='response',newdata=Infect),lwd=3)
 Uninfect<-data.frame(size.log=cw.uninf,status=st.uninf)
 lines(Uninfect$size.log,predict(modelPlot,type='response',newdata=Uninfect),lwd=3,lty=2)
 
-dev.off()
+#dev.off()
 
+# Calculating parameters
 m5.I<-glm(embryos~size.scale*status-1,data=petro,family=poisson)
 plot(m5.I,which=1)
 m5.coef<-m5.I$coefficients
@@ -242,7 +260,7 @@ slope<-data.frame(v1=c("infected","non-infected"),
                   v4=c(exp(m5.ci[1,2]),ciup.uninf))
 names(slope)<-c("status","ci.l","slope","ci.up")
 
-
+# Plotting...
 plot1<-ggplot(data = intercept, aes(x = status, y = intercept, ymin = ci.l, ymax = ci.up)) +
   geom_point(position = position_dodge(width = 0.2)) +
   geom_errorbar(position = position_dodge(width = 0.2), width = 0.1) +
@@ -280,10 +298,31 @@ plot2<- ggplot(data = slope, aes(x = status, y = slope, ymin = ci.l, ymax = ci.u
                    labels=c("Infected","Non-infected")) 
 
 
-tiff(file="int+slope-status.tiff",units="mm",width=170,height=120,res=600,
-     compression="lzw")
+#tiff(file="int+slope-status.tiff",units="mm",width=170,height=120,res=600,
+#     compression="lzw")
 plot_grid(plot1,plot2,labels=c("(a)","(b)"),ncol=2,nrow=1)
-dev.off()
+#dev.off()
 
+# There is no difference between infected and non-infected individuals
+# However, I want to check the distribution of the data to see how variable it is.
 
+#tiff(file="diff-statusANDsize.tiff",units="mm",width=170,height=120,res=600,
+#    compression="lzw")
+par(mfrow=c(1,2))
+hist(fert$embryos[fert$species=='petronioi'&fert$status=="uninfected"],prob=T,
+     ylim=c(0,0.25),main="",xlab="Number of embryos")
+hist(fert$embryos[fert$species=='petronioi'&fert$status=="infected"],add=T,prob=T,
+     col=adjustcolor('red',0.6))
+text(13.62,0.24,"(a)")
 
+hist(log(fert$size.fert[fert$species=='petronioi'&fert$status=="uninfected"]),prob=T,
+     main="",xlab="Cepalothorax width (log)",xlim=c(0.1,0.55))
+hist(log(fert$size.fert[fert$species=='petronioi'&fert$status=="infected"]),add=T,prob=T,
+     col=adjustcolor('red',0.6))
+text(0.48,6.7,"(b)")
+#dev.off()
+
+# Interesting to know that although there is no significant difference, infected individuals
+# are less variable in the number of embryos and size than the non-infected individuals.
+
+# DONE :D

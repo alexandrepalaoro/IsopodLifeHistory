@@ -3,7 +3,7 @@ Dataset and analyses of life history patterns of Netropical isopods (genus ATLAN
 
 In the .csv files you will find the data used in our paper. Feel free to use the data, but if you do please cite the paper:<br/>
 
-Zimmermann, BL; Palaoro, AV; Bouchon, D; Almerão, MP & Araujo, PB (2018) How coexistence may influence life history: the reproduction strategies of sympatric congeneric terrestrial isopods (Crustacea, Oniscidea). Canadian Journal of Zoology, in press. DOI: 10.1139/cjz-2018-0086<br/>
+Zimmermann, BL; Palaoro, AV; Bouchon, D; Almerão, MP & Araujo, PB (2018) How coexistence may influence life history: the reproduction strategies of sympatric congeneric terrestrial isopods (Crustacea, Oniscidea). Canadian Journal of Zoology. DOI: 10.1139/cjz-2018-0086<br/>
 
 The files are: <br/>
 

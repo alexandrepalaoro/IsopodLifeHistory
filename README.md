@@ -1,9 +1,14 @@
 # IsopodLifeHistory
-Dataset and analyses of life history patterns of Netropical isopods (genus ATLANTOSCIA)
+Dataset and analyses of life history patterns of Netropical isopods (genus <i>Atlantoscia</i>)
 
 In the .csv files you will find the data used in our paper. Feel free to use the data, but if you do please cite the paper:<br/>
 
 Zimmermann, BL; Palaoro, AV; Bouchon, D; Almerão, MP & Araujo, PB (2018) How coexistence may influence life history: the reproduction strategies of sympatric congeneric terrestrial isopods (Crustacea, Oniscidea). Canadian Journal of Zoology. DOI: 10.1139/cjz-2018-0086<br/>
+
+And if you use any of the codes or datafiles, please also cite this dataset:</br>
+
+[![DOI](https://zenodo.org/badge/68820480.svg)](https://zenodo.org/badge/latestdoi/68820480)
+
 
 The files are: <br/>
 
